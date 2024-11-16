@@ -1,0 +1,390 @@
+//ex 1:Demonstrate the working of the decision tree based ID3
+//algorithm. Use an appropriate data set for building the decision
+//tree and apply this knowledge to classify a new sample.
+
+import pandas as pd
+import numpy as np
+
+# Sample dataset
+data = pd.DataFrame({
+    'Outlook': ['Sunny', 'Sunny', 'Overcast', 'Rainy', 'Rainy', 'Rainy', 'Overcast', 'Sunny', 'Sunny', 'Rainy', 'Sunny', 'Overcast', 'Overcast'],
+    'Temperature': ['Hot', 'Hot', 'Hot', 'Mild', 'Cool', 'Cool', 'Cool', 'Mild', 'Cool', 'Mild', 'Mild', 'Hot', 'Mild'],
+    'Humidity': ['High', 'High', 'High', 'High', 'Normal', 'Normal', 'Normal', 'High', 'Normal', 'Normal', 'Normal', 'High', 'High'],
+    'Windy': [False, True, False, False, False, True, True, False, False, True, True, False, True],
+    'Play Tennis': ['No', 'No', 'Yes', 'Yes', 'Yes', 'No', 'Yes', 'No', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes']
+})
+
+# Compute entropy
+def entropy(column):
+    counts = column.value_counts()
+    probabilities = counts / len(column)
+    return -np.sum(probabilities * np.log2(probabilities))
+
+# Compute information gain
+def information_gain(data, feature, target):
+    total_entropy = entropy(data[target])
+    values, counts = np.unique(data[feature], return_counts=True)
+    weighted_entropy = np.sum([(counts[i] / len(data)) * entropy(data[data[feature] == values[i]][target]) for i in range(len(values))])
+    return total_entropy - weighted_entropy
+
+# Build decision tree
+def build_tree(data, features, target):
+    if len(data[target].unique()) == 1:  # If only one class remains
+        return data[target].iloc[0]
+    if not features:  # If no features left
+        return data[target].mode().iloc[0]
+
+    best_feature = max(features, key=lambda f: information_gain(data, f, target))
+    tree = {best_feature: {}}
+    for value in data[best_feature].unique():
+        subset = data[data[best_feature] == value]
+        subtree = build_tree(subset, [f for f in features if f != best_feature], target)
+        tree[best_feature][value] = subtree
+    return tree
+
+# Classify a sample
+def classify(tree, sample):
+    if not isinstance(tree, dict):  # Leaf node
+        return tree
+    feature = next(iter(tree))
+    value = sample.get(feature)
+    return classify(tree[feature].get(value, "Unknown"), sample)
+
+# Build and test the decision tree
+features = ['Outlook', 'Temperature', 'Humidity', 'Windy']
+target = 'Play Tennis'
+decision_tree = build_tree(data, features, target)
+print("Decision Tree:", decision_tree)
+
+new_sample = {'Outlook': 'Sunny', 'Temperature': 'Cool', 'Humidity': 'High', 'Windy': False}
+classification = classify(decision_tree, new_sample)
+print(f"Classification for new sample: {classification}")
+
+
+
+
+//ex:2Implement and demonstrate the Support vector machine
+//classification on an appropriate given set of training data
+//samples.
+
+import numpy as np
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score
+
+# Load Iris dataset
+iris = load_iris()
+X, y = iris.data, iris.target
+
+# Binary classification: Select two classes (Setosa and Versicolor)
+X, y = X[y != 2], y[y != 2]
+
+# Split dataset into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# Train SVM model
+model = SVC(kernel='rbf', gamma='scale', C=1.0)
+model.fit(X_train, y_train)
+
+# Evaluate model
+y_pred = model.predict(X_test)
+print(f"Accuracy: {accuracy_score(y_test, y_pred):.2f}")
+
+# Classify a new sample
+new_sample = np.array([[5.1, 3.5, 1.4, 0.2]])
+new_prediction = model.predict(new_sample)
+print(f"New Sample Classification: {iris.target_names[new_prediction][0]}")
+
+
+
+
+//ex:3. Implement Regression algorithms using Python.
+
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.metrics import mean_squared_error, r2_score
+
+# Generate synthetic data
+np.random.seed(0)
+X = 2 * np.random.rand(100, 1)
+y = 4 + 3 * X + 1.5 * X**2 + np.random.randn(100, 1)
+
+# Linear Regression
+lin_reg = LinearRegression()
+lin_reg.fit(X, y)
+y_pred_lin = lin_reg.predict(X)
+mse_lin, r2_lin = mean_squared_error(y, y_pred_lin), r2_score(y, y_pred_lin)
+
+# Polynomial Regression
+poly = PolynomialFeatures(degree=2, include_bias=False)
+X_poly = poly.fit_transform(X)
+poly_reg = LinearRegression()
+poly_reg.fit(X_poly, y)
+y_pred_poly = poly_reg.predict(X_poly)
+mse_poly, r2_poly = mean_squared_error(y, y_pred_poly), r2_score(y, y_pred_poly)
+
+# Ridge Regression
+ridge_reg = Ridge(alpha=1.0)
+ridge_reg.fit(X, y)
+y_pred_ridge = ridge_reg.predict(X)
+mse_ridge, r2_ridge = mean_squared_error(y, y_pred_ridge), r2_score(y, y_pred_ridge)
+
+# Print results
+print(f"Linear Regression: MSE={mse_lin:.2f}, R²={r2_lin:.2f}")
+print(f"Polynomial Regression: MSE={mse_poly:.2f}, R²={r2_poly:.2f}")
+print(f"Ridge Regression: MSE={mse_ridge:.2f}, R²={r2_ridge:.2f}")
+
+# Visualize Polynomial Fit
+plt.scatter(X, y, color='blue', label='Data points')
+X_range = np.linspace(X.min(), X.max(), 100).reshape(-1, 1)
+plt.plot(X_range, poly_reg.predict(poly.transform(X_range)), color='red', label='Polynomial Fit')
+plt.xlabel('Feature')
+plt.ylabel('Target')
+plt.legend()
+plt.show()
+
+
+
+//ex:4 Implement k-nearest neighbor classification using Python.
+
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.datasets import load_iris
+import numpy as np
+
+# Load the Iris dataset
+iris = load_iris()
+X, y = iris.data, iris.target
+
+# Split the dataset into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# Create the KNN model
+knn = KNeighborsClassifier(n_neighbors=3)  # Choose 3 neighbors
+
+# Train the model
+knn.fit(X_train, y_train)
+
+# Evaluate the model
+accuracy = knn.score(X_test, y_test)
+print(f"Model Accuracy: {accuracy:.2f}")
+
+# Classify a new sample
+new_sample = np.array([[5.1, 3.5, 1.4, 0.2]])
+prediction = knn.predict(new_sample)
+print(f"Predicted Class: {iris.target_names[prediction][0]}")
+
+
+
+//ex:5. Implement Gaussian Mixture Models using Python.
+
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn import datasets
+
+# Load the Iris dataset
+iris = datasets.load_iris()
+
+# Select the first two columns of features
+X = iris.data[:, :2]
+
+# Convert to a DataFrame for better handling
+df = pd.DataFrame(X, columns=['Feature 1', 'Feature 2'])
+
+# Scatter plot of the first two features
+plt.scatter(df['Feature 1'], df['Feature 2'], color='blue', alpha=0.7, edgecolor='k')
+plt.title('Iris Dataset - First Two Features')
+plt.xlabel('Feature 1')
+plt.ylabel('Feature 2')
+plt.grid(True)
+plt.show()
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn import datasets
+from sklearn.mixture import GaussianMixture
+
+# Load the Iris dataset
+iris = datasets.load_iris()
+
+# Select the first two features for clustering
+X = iris.data[:, :2]
+
+# Convert to a DataFrame
+df = pd.DataFrame(X, columns=['Feature 1', 'Feature 2'])
+
+# Create and fit the GMM model with 3 components (clusters)
+gmm = GaussianMixture(n_components=3, random_state=42)
+gmm.fit(df)
+
+# Assign labels to each sample
+labels = gmm.predict(df)
+df['Cluster'] = labels
+
+# Separate data by cluster labels
+cluster_0 = df[df['Cluster'] == 0]
+cluster_1 = df[df['Cluster'] == 1]
+cluster_2 = df[df['Cluster'] == 2]
+
+# Plot the clusters
+plt.scatter(cluster_0['Feature 1'], cluster_0['Feature 2'], color='red', label='Cluster 0')
+plt.scatter(cluster_1['Feature 1'], cluster_1['Feature 2'], color='yellow', label='Cluster 1')
+plt.scatter(cluster_2['Feature 1'], cluster_2['Feature 2'], color='green', label='Cluster 2')
+plt.title('GMM Clustering')
+plt.xlabel('Feature 1')
+plt.ylabel('Feature 2')
+plt.legend()
+plt.show()
+
+ 
+
+ //ex:6. Implement Dimensionality reduction using Python.
+
+
+from sklearn import datasets  
+import pandas as pd  
+from sklearn.preprocessing import StandardScaler  
+from sklearn.decomposition import PCA  
+import seaborn as sns  
+import matplotlib.pyplot as plt  
+
+# Step 2: Load the dataset and convert to DataFrame
+iris = datasets.load_iris()
+df = pd.DataFrame(iris['data'], columns=iris['feature_names'])
+print("Original Dataset:")
+print(df.head()) 
+
+# Step 3: Standardize the features
+scaler = StandardScaler()
+scaled_data = pd.DataFrame(scaler.fit_transform(df), columns=df.columns)
+print("\nScaled Dataset:")
+print(scaled_data.head())  
+
+# Step 4: Apply PCA
+pca = PCA(n_components=3)  
+data_pca = pd.DataFrame(pca.fit_transform(scaled_data), columns=['PC1', 'PC2', 'PC3'])
+print("\nDataset after PCA:")
+print(data_pca.head())  
+
+# Step 5: Check correlations between PCA components using a heatmap
+plt.figure(figsize=(8, 6))
+sns.heatmap(data_pca.corr(), annot=True, cmap='coolwarm')
+plt.title("Correlation Heatmap of Principal Components")
+plt.show()
+
+
+
+//ex:7. Implement K-Means clustering using Python.
+
+from sklearn.cluster import KMeans
+import numpy as np
+
+# Step 1: Define the data
+X = np.array([[1.713, 1.586], [0.180, 1.786], [0.353, 1.240],
+              [0.940, 1.566], [1.486, 0.759], [1.266, 1.106],
+              [1.540, 0.419], [0.459, 1.799], [0.773, 0.186]])
+y = np.array([0, 1, 1, 0, 1, 0, 1, 1, 1])
+
+# Step 2: Fit the K-Means model
+kmeans = KMeans(n_clusters=3, random_state=0).fit(X)
+
+# Display input data
+print("The input data is:")
+print("VAR1\tVAR2\tCLASS")
+for i, (var1, var2) in enumerate(X):
+    print(f"{var1:.3f}\t{var2:.3f}\t{y[i]}")
+print("=" * 20)
+
+# Step 3: Predict the class for the test data
+VAR1 = float(input("Enter Value for VAR1: "))
+VAR2 = float(input("Enter Value for VAR2: "))
+test_data = np.array([[VAR1, VAR2]])
+
+# Display the predicted class
+predicted_class = kmeans.predict(test_data)
+print("=" * 20)
+print(f"The predicted class is: {predicted_class[0]}")
+
+
+
+//ex:8. Implement the naïve Bayesian classifier for a sample training
+//data set stored as a .CSV file. Compute the accuracy of the
+//classifier, considering few test data sets.
+
+import pandas as pd
+from sklearn.naive_bayes import GaussianNB
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import accuracy_score
+
+# Load data from CSV
+data = pd.read_csv('tennis_data.csv')
+
+# Prepare features and target
+X = data.iloc[:, :-1]
+y = data.iloc[:, -1]
+
+# Convert categorical columns to numeric
+le = LabelEncoder()
+for column in X.columns:
+    X[column] = le.fit_transform(X[column])
+
+# Encode target variable
+y = le.fit_transform(y)
+
+# Split data into training and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+
+# Train Naïve Bayes classifier
+classifier = GaussianNB()
+classifier.fit(X_train, y_train)
+
+# Predict and compute accuracy
+y_pred = classifier.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy:", accuracy)
+
+
+
+//ex:9. Build an Artificial Neural Network by implementing the
+// Backpropagation algorithm and test the same using appropriate
+// data sets.
+
+# Import necessary libraries
+import numpy as np
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.neural_network import MLPClassifier
+from sklearn.metrics import accuracy_score, classification_report
+
+# Step 1: Load the dataset (Iris dataset for simplicity)
+iris = load_iris()
+X = iris.data  # Features
+y = iris.target  # Labels
+
+# Step 2: Split the dataset into training and testing sets (80% train, 20% test)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Step 3: Create and train the Artificial Neural Network (ANN)
+# Increase max_iter to avoid convergence warning
+classifier = MLPClassifier(hidden_layer_sizes=(10,), max_iter=2000, activation='relu', solver='adam', random_state=42)
+
+# Train the model
+classifier.fit(X_train, y_train)
+
+# Step 4: Make predictions on the test set
+y_pred = classifier.predict(X_test)
+
+# Step 5: Evaluate the model's performance
+accuracy = accuracy_score(y_test, y_pred)
+print(f"Accuracy of the ANN with Backpropagation: {accuracy * 100:.2f}%")
+
+# Display the classification report
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
